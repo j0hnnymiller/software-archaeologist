@@ -1,130 +1,67 @@
 # Feasibility: Codebase Analysis POC
 
-## Summary
+## Current implementation
 
-This proof of concept is feasible with a small, repository-based setup. Keep
-the analysis instructions, agents, and skills in this repository, and include
-the codebase to analyze as a Git submodule. Open the containing repository as
-the VS Code workspace so the assistant can use the tooling and inspect the
-submodule in the same workspace.
+This repository contains a workspace custom agent and evidence instructions
+for generating a read-only overview of the Git submodule at `target/`.
+The agent is available in `.github/agents/codebase-analyst.agent.md`; shared
+analysis rules are in `.github/instructions/codebase-analysis.instructions.md`.
+The agent is constrained to read and search tools, requires target-file
+citations for factual claims, distinguishes observations from hypotheses, and
+reports when the submodule is unavailable.
 
-The main uncertainty is not whether an assistant can read both repositories;
-it is whether the chosen assistant discovers and applies customization files
-from the tooling repository as expected. Skill and instruction discovery can
-depend on the assistant, file location, and workspace configuration. The POC
-should test that behavior early and explicitly, rather than assuming every
-assistant uses the same conventions.
+The intended workspace is the top-level repository. The submodule pins the
+target source revision, keeping the analysis guidance and analyzed code
+separate in Git. This is a workflow boundary, not a security boundary.
 
-## Proposed layout
+## Verification record
 
-```text
-software-archaeologist/
-├── .github/
-│   ├── agents/
-│   │   └── codebase-analyst.agent.md
-│   └── instructions/
-│       └── codebase-analysis.instructions.md
-├── skills/
-│   └── codebase-overview/
-│       └── SKILL.md
-├── docs/
-│   └── feasibility.md
-├── target/                 # Git submodule: codebase under analysis
-└── README.md
-```
+Checks below were performed on 2026-10-23 using the Copilot CLI on Windows.
+They verify CLI behavior only; they do not establish equivalent behavior in
+VS Code Chat or other assistants.
 
-The exact names and locations should follow the conventions of the target AI
-assistant. If those conventions require skills or instructions in another
-location, configure or document that location as part of the POC.
-
-## How it could work
-
-1. Add a representative project as a Git submodule at `target/`.
-2. Open the top-level repository in VS Code, and initialize the submodule
-   after cloning (`git submodule update --init --recursive`).
-3. Provide an analysis agent with a clear scope: inspect `target/`, treat it as
-   read-only, cite relevant files in its findings, and do not change its
-   contents.
-4. Provide a focused skill with repeatable steps, such as identifying project
-   languages, entry points, build and test commands, major components, and
-   important dependencies.
-5. Use workspace-level instructions for shared constraints and output
-   expectations. Keep task-specific procedures in the skill and agent instead
-   of duplicating them.
-6. Ask the assistant to produce a concise overview and verify the results
-   against the target repository.
-
-The submodule keeps the target codebase at a pinned commit and makes the
-separation between tooling and analyzed source explicit. The target can be
-updated independently by changing the submodule reference.
-
-## Feasibility considerations
-
-| Area | Assessment | POC approach |
+| Step | Outcome | Evidence and remaining limitation |
 | --- | --- | --- |
-| Access to both repositories | Feasible when both are present in the opened workspace. | Keep the target in a submodule and test file discovery from the workspace root. |
-| Customization discovery | Assistant-dependent; must be verified. | Start with documented, supported file locations and run a small discovery test. |
-| Repository separation | Feasible, but not a security boundary. | Use a read-only analysis scope and avoid modifying submodule files. |
-| Repeatability | Feasible for a bounded set of analysis tasks. | Use a checklist and a stable report structure. |
-| Portability | Depends on Git submodule support and assistant conventions. | Document clone/setup steps and record supported assistant versions or modes. |
-| Analysis accuracy | Achievable only with source verification. | Require evidence and file references for substantive findings; review output manually. |
+| 1. Clean setup | Pass | A fresh recursive clone initialized `target/` at pinned commit `bb611ae9f46271bea5d36616667607a988353b15`. Environment: Node.js `v22.22.2`, npm `10.9.7`, VS Code `1.143.1`. |
+| 2. Customization discovery | Pass for CLI | Copilot CLI `1.0.99-2` discovered temporary workspace instruction and skill probes and invoked a temporary named agent. Copilot CLI `1.0.104-1` discovered the implemented instruction and invoked `codebase-analyst`. VS Code Chat was not tested. |
+| 3. Target access | Pass for CLI | Copilot CLI `1.0.104-1` identified target files and key project facts from the workspace root. The implemented agent was also tested in a checkout with an uninitialized submodule; it stopped, did not infer project details, and gave the initialization command. |
+| 4. Bounded overview | Pass for the tested target | The implemented agent produced the required sections and file-path citations in three post-change runs. Reports were checked against target source and configuration. The earlier inaccurate line-number citations are avoided by not requesting line numbers. The agent reports documented commands but does not run them. |
+| 5. Read-only boundary | Pass for tested runs | With write and shell tools denied, the CLI produced overviews. Root and target Git status and diffs were clean before and after; the target remained at the pinned commit. This does not prove the submodule is a security boundary. |
+| 6. Repeatability | Pass for structure and citations; details vary | Three post-implementation CLI runs included every required section and had all findings labeled and cited. They agreed on the main project facts and commands, while the amount of detail varied. The reports were spot-checked against the target; human review remains necessary for future findings. |
+| 7. Setup portability | Setup and CLI invocation pass; human onboarding incomplete | Fresh recursive clone and existing-clone submodule initialization both worked. The README, agent, and instruction are present; the CLI invocation and missing-submodule behavior were exercised in disposable checkouts. No genuinely unfamiliar tester has followed the updated instructions. VS Code Chat remains unverified. |
 
-## Risks and mitigations
+## Known limitations and risks
 
-- **Instructions or skills are not loaded.** Verify discovery with a deliberately
-  distinctive instruction and confirm that the assistant follows it. If
-  necessary, use workspace configuration or an explicit prompt to expose the
-  tooling files.
-- **The target is missing after clone.** Document submodule initialization and
-  make the analysis instructions check for an empty or unavailable `target/`
-  directory before proceeding.
-- **The assistant edits analyzed code.** State a read-only requirement, review
-  the worktree after analysis, and keep any generated report outside the
-  submodule.
-- **Findings are unsupported or incomplete.** Require concrete file references
-  and separate observed facts from hypotheses. Validate build and test
-  instructions against the target's own documentation and configuration.
-- **The setup is coupled to one assistant.** Treat discovery and execution
-  conventions as an adapter layer; keep the analysis procedure itself as
-  portable as practical.
-- **The target contains sensitive or untrusted content.** Use only code the
-  operator is authorized to analyze, and do not send private source to
-  unapproved external services.
-
-## Suggested implementation stages
-
-1. **Validate workspace discovery.** Add a small example instruction and agent,
-   place a sample repository in `target/`, and confirm that the assistant can
-   see both the customization files and target source.
-2. **Implement one useful skill.** Start with a repository overview: detect
-   languages and frameworks, identify entry points, summarize directory
-   structure, and locate documented build and test commands.
-3. **Define evidence-based output.** Have the agent return a short report with
-   project summary, architecture clues, development commands, and cited
-   source-file paths. Mark uncertain conclusions as hypotheses.
-4. **Test repeatability and boundaries.** Run the same task more than once;
-   check for missing-target handling, citation quality, and unintended
-   modifications.
-5. **Document setup and limitations.** Record how to clone and initialize the
-   submodule, open the workspace, invoke the analysis, and interpret results.
+- Agent and instruction conventions are assistant-dependent. Copilot CLI
+  discovery and invocation have been exercised; VS Code Chat discovery and
+  invocation still require validation.
+- Model-generated citations and summaries are not guaranteed correct. Check
+  factual claims against cited target files, especially entry points and
+  commands. The fixed output format does not guarantee consistent quality.
+- Read/search-only agent tools reduce available actions but are not a security
+  boundary. Do not analyze code or data that should not be exposed to the
+  configured assistant.
+- The target may contain untrusted or sensitive content. Use only material
+  the operator is authorized to analyze, and follow organizational rules for
+  external AI services.
+- The overview reports documented commands but does not execute them. Build
+  and test success must be validated separately.
 
 ## Acceptance criteria
 
-The POC is successful when a new user can:
+The POC is considered usable for a bounded overview when:
 
-- clone the tooling repository and initialize the target submodule;
-- open the top-level workspace and confirm the analysis customization is
-  available to the selected assistant;
-- request a repository overview and receive findings grounded in the target's
-  actual files;
-- identify which conclusions are facts versus hypotheses; and
-- complete the analysis without changes to the target submodule.
+- a clean clone can initialize the pinned target submodule;
+- the documented assistant discovers and invokes the workspace agent;
+- an initialized target yields a concise overview with factual claims cited
+  to inspected target files;
+- a missing or empty target is reported without invented project details;
+- observations are distinguished from hypotheses and unverified commands are
+  not described as passing; and
+- target status is unchanged by the overview workflow.
 
-## Conclusion
-
-The approach is practical for a bounded proof of concept. A Git submodule is a
-simple way to colocate a pinned target codebase with repository-level analysis
-guidance. The first implementation milestone should be a small end-to-end
-discovery test, since assistant-specific customization loading is the largest
-feasibility uncertainty. If that test passes, the remaining work is primarily
-authoring, validating, and documenting a repeatable analysis procedure.
+Before claiming portability beyond the Copilot CLI, validate discovery and
+invocation in VS Code Chat. Before claiming successful onboarding, have a user
+unfamiliar with the repository follow the README from a clean environment.
+Repeat the overview several times and evaluate citations and uncertainty
+quality, not only agreement on headline facts.
