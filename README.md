@@ -21,3 +21,20 @@ skills, agents, and instructions added as this proof of concept evolves.
 This is an exploratory project, not a production-ready analysis framework.
 Its purpose is to test how repository-level AI guidance can support analysis
 of a separate codebase.
+
+## Target repository
+
+The [target](target/) directory is a Git submodule containing
+[sa-test](https://github.com/j0hnnymiller/sa-test), the sample codebase to analyze.
+
+Clone this repository with its target:
+
+```powershell
+git clone --recurse-submodules https://github.com/j0hnnymiller/software-archaeologist.git
+```
+
+For an existing clone, initialize the target with:
+
+```powershell
+git submodule update --init --recursive
+```
