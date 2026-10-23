@@ -1,3 +1,20 @@
+---
+ai_generated: true
+model: "unknown/unknown@unknown"
+operator: "johnmillerATcodemag-com"
+chat_id: "f80ec142-dec0-4aa2-901c-89f1e9a26b16"
+prompt: |
+  create a skill that automates the verification of the proof of concept
+started: "2026-10-23T22:16:19Z"
+ended: "2026-10-23T22:24:24Z"
+task_durations:
+  - task: "Skill authoring and automated verification"
+    duration: "00:08:05"
+total_duration: "00:08:05"
+ai_log: "ai-logs/2026/10/23/f80ec142-dec0-4aa2-901c-89f1e9a26b16/conversation.md"
+source: "Existing README; verification skill documentation update; model identity unavailable"
+---
+
 # Software Archaeologist
 
 This repository packages a read-only codebase overview agent and evidence
@@ -71,3 +88,29 @@ and its evidence rules are in
 [`.github/instructions/codebase-analysis.instructions.md`](.github/instructions/codebase-analysis.instructions.md).
 Customization discovery has been exercised with Copilot CLI; VS Code Chat
 discovery and invocation have not yet been independently verified.
+
+## Verify the proof of concept
+
+Use the repository-local [verify-poc skill](.github/skills/verify-poc/SKILL.md)
+to rerun the CLI checks described in [feasibility](docs/feasibility.md).
+Ask Copilot to "verify the POC", or run the bundled script directly:
+
+```powershell
+pwsh -NoProfile -File .github\skills\verify-poc\scripts\verify-poc.ps1
+```
+
+Requires PowerShell 7, Git, an authenticated Copilot CLI, access to the target
+remote, and authorization to send target contents to the configured AI service.
+The workflow uses the configured model and may consume paid requests.
+It tests committed `HEAD` in disposable clones, not uncommitted customizations.
+Three overview runs and an uninitialized-target run check discovery, report
+structure, citation/read evidence, restricted tool use, and unchanged file/Git
+state. Evidence and source copies remain in a unique directory outside this
+working tree; the script prints its location and exits nonzero on failure.
+
+Automated checks do not prove that claims are supported by their citations.
+Review the retained reports against their source before accepting the POC.
+VS Code Chat behavior and unfamiliar-user onboarding remain manual checks.
+See the skill for evidence retention, runner tests, and CLI compatibility.
+The [authoring and validation record](ai-logs/2026/10/23/f80ec142-dec0-4aa2-901c-89f1e9a26b16/summary.md)
+documents the checks performed when adding this skill.
