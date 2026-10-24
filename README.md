@@ -13,6 +13,12 @@ task_durations:
 total_duration: "00:08:05"
 ai_log: "ai-logs/2026/10/23/f80ec142-dec0-4aa2-901c-89f1e9a26b16/conversation.md"
 source: "Existing README; verification skill documentation update; model identity unavailable"
+revisions:
+  - chat_id: "e274fa00-c397-494a-9a2e-6b490895c15b"
+    model: "unknown/unknown@unknown"
+    date: "2026-10-24"
+    change: "Documented safe target submodule replacement and offline regression tests."
+    ai_log: "ai-logs/2026/10/24/e274fa00-c397-494a-9a2e-6b490895c15b/conversation.md"
 ---
 
 # Software Archaeologist
@@ -54,6 +60,50 @@ For an existing clone, initialize the target with:
 ```powershell
 git submodule update --init --recursive
 ```
+
+### Replace the target repository
+
+Use the [replacement script](.github/scripts/replace-target.ps1) to remove the
+current target checkout and register a different repository at the same path:
+
+```powershell
+pwsh -NoProfile -File .github\scripts\replace-target.ps1 -Url https://github.com/owner/repository.git
+```
+
+Requires PowerShell 7, Git, and access to the replacement remote. Run from any
+directory; the script locates this repository relative to itself. Commit or
+stash all existing repository changes first. It also refuses ignored files in
+the old target or initialized nested submodules; move those files elsewhere
+before proceeding. There is no force option.
+
+Add `-WhatIf` to check prerequisites and preview the operation without cloning
+or changing files. The replacement is cloned and its `HEAD` verified before the
+old checkout is removed. The script stages only the replacement `.gitmodules`
+and `target` changes and does not commit, push, or initialize nested submodules
+in the new target. Review `git diff --cached` and commit when ready. Initialize
+the new target's nested submodules separately if needed:
+
+```powershell
+git submodule update --init --recursive -- target
+```
+
+The old submodule's Git metadata is retained at the location printed by the
+script, preserving local-only commits for recovery. Each replacement gets a
+fresh internal submodule name to avoid reusing the previous remote or object
+database. This retains disk usage until you separately archive or remove old
+metadata. Failures after removal are not automatically rolled back: inspect
+`git status` and the reported paths before attempting recovery or retrying.
+Failed prepared clones remain in the printed temporary location for inspection.
+
+Run the offline [replacement regression tests](.github/scripts/tests/test-replace-target.ps1)
+with:
+
+```powershell
+pwsh -NoProfile -File .github\scripts\tests\test-replace-target.ps1
+```
+
+The [replacement authoring record](ai-logs/2026/10/24/e274fa00-c397-494a-9a2e-6b490895c15b/summary.md)
+describes the verification performed.
 
 ## Run a codebase overview
 
