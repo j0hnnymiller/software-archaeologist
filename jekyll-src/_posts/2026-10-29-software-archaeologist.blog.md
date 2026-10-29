@@ -17,7 +17,7 @@ prompt: |
   - basics of how submodules work
   - how github copilot utilizes config (instructions, skills, agents, etc.) found in the software archaeologist repo.
   - how github copilot utilizes config (instructions, skills, agents, etc.) found in the submodule repo(s).
-  - an explaination of the replace submodule scripts
+  - an explanation of the replace submodule scripts
   - scenarios for how this behavior can be leveraged
 started: "2026-10-29T16:42:00Z"
 ended: "2026-10-29T16:50:00Z"
@@ -176,11 +176,17 @@ These are single runs on one CLI version, and model output varies. The moon-phas
 
 VS Code discovers customizations within the open workspace folders. Opening the top-level folder gives the same host-first behavior as the CLI. Opening `target/` by itself gives the target's configuration only. A multi-root workspace that lists both folders makes both sets of customizations available.
 
-There is one setting to watch. `chat.useCustomizationsInParentRepositories` lets VS Code walk up from a workspace folder to the nearest parent folder that contains a `.git` _folder_ and collect customizations along the way, and the documented condition is that the workspace folder itself does not contain a `.git` folder. An absorbed submodule has a `.git` _file_. Based on that wording, opening `target/` alone with the setting enabled may pull the archaeologist's configuration in from the parent. I have not verified this in VS Code; check the Chat customization diagnostics before relying on it either way.
+There is one setting to watch: `chat.useCustomizationsInParentRepositories`. The [documented monorepo behavior](https://code.visualstudio.com/docs/agent-customization/overview#_use-customizations-in-a-monorepo) lets VS Code collect customizations between an open subfolder and its parent repository root. The parent must be trusted, and the documentation describes the workspace folder as not itself being a repository root. This is not a documented promise of inheritance across separate repositories.
+
+In a follow-up check on October 29, I opened `target/` with `"chat.useCustomizationsInParentRepositories": true` and did not see the host's configuration being used. The repository inspection confirmed that `target/` is a submodule: its `.git` file points into the host's `.git/modules/` directory, but Git still reports `target/` as its own repository root. A `.git` file instead of a folder does not make the target an ordinary monorepo subfolder.
+
+That makes the submodule boundary the likely explanation, not a confirmed diagnosis of VS Code's discovery implementation. The available logs did not establish the exact loading decision. My earlier inference that a `.git` file might allow parent discovery was therefore not a reliable basis for this workflow.
+
+For this setup, **open the top-level `software-archaeologist` folder, trust it, and start a fresh chat**. That puts the host's customizations directly in the workspace instead of depending on parent discovery. Check the Chat customization diagnostics or **Developer: Open Agent Debug Logs** to confirm which files are available; do not assume the setting makes the host's agents, skills, and instructions available when only `target/` is open.
 
 ## How the Replace-Target Scripts Work
 
-Replacing a submodule by hand is a sequence of commands that is easy to get subtly wrong: deinitialize, remove the gitlink, delete the directory, add the new repository, and hope no cached remote or object database from the old submodule leaks into the new one. [replace-target.ps1](https://github.com/j0hnnymiller/software-archaeologist/blob/main/.github/scripts/replace-target.ps1) performs that sequence with guardrails and stops before committing anything. It requires PowerShell 7 and Git.
+Replacing a submodule by hand is a sequence of commands that is easy to get subtly wrong: de-initialize, remove the gitlink, delete the directory, add the new repository, and hope no cached remote or object database from the old submodule leaks into the new one. [replace-target.ps1](https://github.com/j0hnnymiller/software-archaeologist/blob/main/.github/scripts/replace-target.ps1) performs that sequence with guardrails and stops before committing anything. It requires PowerShell 7 and Git.
 
 ```powershell
 # Preview: checks prerequisites, clones nothing, changes nothing
@@ -193,7 +199,7 @@ git diff --cached
 
 The script works in three stages.
 
-1. **Refuse unsafe starting states.** It rejects URLs that start with `-`, so a value such as `--upload-pack=...` cannot be passed to Git as an option. It confirms it is at the repository's top level, that exactly one submodule is configured at `target`, and that the index holds an unconflicted `160000` gitlink there. It refuses to run if the host has any modified or untracked files, or if `target/` or any nested submodule has changes, untracked files, or even _ignored_ files — ignored files are not tracked in any repository, so deleting them would lose them for good. There is no force option.
+1. **Refuse unsafe starting states.** It rejects URLs that start with `-`, so a value such as `--upload-pack=...` cannot be passed to Git as an option. It confirms it is at the repository's top level, that exactly one submodule is configured at `target`, and that the index holds an un-conflicted `160000` gitlink there. It refuses to run if the host has any modified or untracked files, or if `target/` or any nested submodule has changes, untracked files, or even _ignored_ files — ignored files are not tracked in any repository, so deleting them would lose them for good. There is no force option.
 2. **Clone first, then remove.** It clones the new URL into a uniquely named temporary folder and verifies that the clone has a `HEAD` commit. Only after the network work succeeds does it run `git submodule deinit` and `git rm` on the old target. A bad URL, missing permissions, or an empty repository fails while the original target is still intact.
 3. **Register cleanly and stop.** It moves the prepared clone into `target/`, registers it with `git submodule add --name target-<guid>`, and runs `git submodule absorbgitdirs` so the new repository's database moves under `.git/modules/`. The fresh internal name is the important detail: Git caches each submodule's database under `.git/modules/<name>`, and reusing a name can attach the new path to the old repository's objects and `origin`. The script leaves `.gitmodules` and the `target` gitlink staged and never commits or pushes.
 
@@ -230,7 +236,7 @@ The repository is an exploratory proof of concept, and a few limits are worth st
 
 ## What's Next?
 
-The next step is to verify the VS Code side of the table: whether the agent picker exposes `software-archeologist` from the top-level workspace, whether nested target instructions load when the agent opens target files, and whether `chat.useCustomizationsInParentRepositories` treats an absorbed submodule as part of its parent. I also plan to add an explicit host instruction that ranks target-supplied instructions as evidence rather than direction, then rerun the canary to measure whether it holds.
+The next step is to verify the remaining VS Code behavior from the top-level workspace: whether the agent picker exposes `software-archeologist` and whether nested target instructions load when the agent opens target files. The target-only check did not show host configuration loading with `chat.useCustomizationsInParentRepositories` enabled; a diagnostic capture is still needed to establish exactly why. I also plan to add an explicit host instruction that ranks target-supplied instructions as evidence rather than direction, then rerun the canary to measure whether it holds.
 
 ## Feedback Loop
 
@@ -242,6 +248,7 @@ AI contributed to the writing of this post, but humans reviewed it, refined it, 
 
 Prompts:
 
-- Write the post from this prompt: "write a blog post explaining the software archaeologist repo. include: - basics of how submodules work - how github copilot utilizes config (instructions, skills, agents, etc.) found in the software archaeologist repo. - how github copilot utilizes config (instructions, skills, agents, etc.) found in the submodule repo(s). - an explaination of the replace submodule scripts - scenarios for how this behavior can be leveraged"
+- Write the post from this prompt: "write a blog post explaining the software archaeologist repo. include: - basics of how submodules work - how github copilot utilizes config (instructions, skills, agents, etc.) found in the software archaeologist repo. - how github copilot utilizes config (instructions, skills, agents, etc.) found in the submodule repo(s). - an explanation of the replace submodule scripts - scenarios for how this behavior can be leveraged"
 - Probe Copilot CLI from the repository root and from `target/`: "Without using any tools, list the file paths of every custom instruction, agent, and skill file loaded into your context. Then answer: what is 2+2?"
 - Probe nested discovery from the repository root: "Read target/src/calculator.ts and describe it in one sentence. Follow every custom instruction that applies."
+- Update the VS Code findings after checking parent discovery from the target-only workspace: "update the blog post to reflect these findings"
