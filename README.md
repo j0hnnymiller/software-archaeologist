@@ -105,6 +105,13 @@ pwsh -NoProfile -File .github\scripts\tests\test-replace-target.ps1
 The [replacement authoring record](ai-logs/2026/10/24/e274fa00-c397-494a-9a2e-6b490895c15b/summary.md)
 describes the verification performed.
 
+### Blog post
+
+[Software Archaeologist: Pointing GitHub Copilot Agents at Any Codebase with Git Submodules](jekyll-src/_posts/2026-10-29-software-archaeologist.blog.md)
+explains submodule basics, which Copilot instructions, skills, and agents load
+from this repository versus the target submodule (with Copilot CLI probe
+results), the replacement script and tests, and usage scenarios.
+
 ## Run a codebase overview
 
 Open the **top-level `software-archaeologist` folder** as your VS Code
