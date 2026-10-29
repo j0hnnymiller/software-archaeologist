@@ -35,6 +35,7 @@ source: "User prompt; repository inspection; GitHub and VS Code documentation; C
 
 When you inherit an unfamiliar codebase, the last thing you want is to start adding files to it just so your AI assistant knows how to investigate it. The [Software Archaeologist](https://github.com/j0hnnymiller/software-archaeologist) repository flips that around: the investigation tooling lives in one repository, and the codebase under investigation is mounted beside it as a Git submodule at `target/`.
 
+
 In this post, I'll explain how the pieces fit together — submodules, GitHub Copilot instruction files, agent skills, and custom agents — and what I observed when I tested which configuration Copilot actually loads from each side of the submodule boundary.
 
 <!--more-->
@@ -177,6 +178,47 @@ These are single runs on one CLI version, and model output varies. The moon-phas
 VS Code discovers customizations within the open workspace folders. Opening the top-level folder gives the same host-first behavior as the CLI. Opening `target/` by itself gives the target's configuration only. A multi-root workspace that lists both folders makes both sets of customizations available.
 
 For this setup, **open the top-level `software-archaeologist` folder, trust it, and start a fresh chat**. That puts the host's customizations directly in the workspace instead of depending on parent discovery. Check the Chat customization diagnostics or **Developer: Open Agent Debug Logs** to confirm which files are available; do not assume the setting makes the host's agents, skills, and instructions available when only `target/` is open.
+
+### Run a host skill against only the target
+
+The folder that supplies a skill does not have to be the folder it analyzes. I keep the host open so Copilot can discover the archaeologist's tools, but explicitly set the investigation root to `target/`. The parent supplies the procedure; it is not part of the codebase being assessed.
+
+For example, invoke the inventory skill in VS Code with an explicit boundary:
+
+```text
+/inventory-technology-stack target/
+
+Analyze only target/. Read the host skill and its supporting scripts as
+tooling, but do not inventory or assess the parent repository. Scope every
+search and file listing to target/, and run Git history commands against
+the target repository. Do not follow references outside target/; report
+them as out of scope. Make no changes and do not install packages or run
+builds. Report the resolved analysis root, exclusions, commands used, and
+target-relative evidence paths. Stop after the inventory and coverage notes.
+```
+
+In Copilot CLI, start `copilot --agent software-archeologist` from the host root and ask it to "Use the inventory-technology-stack skill on target/ only," followed by the same boundary instructions. Substitute another skill name and an appropriate stop condition for a different investigation.
+
+Do not omit the folder argument: the inventory skill defaults to the workspace root, which would include the host when it is open. An instruction's `applyTo` glob controls when guidance applies; it does not restrict where a skill searches.
+
+For the inventory's deterministic scan, the equivalent command from the host root is:
+
+```powershell
+python .github\skills\inventory-technology-stack\scripts\inventory_technologies.py .\target --undeclared
+```
+
+The script path selects the tool; `.\target` selects the tree to scan. The scanner normally skips directories named `target` when encountered below a scan root, but passing `.\target` as the root scans its contents directly. Its usual dependency and build-output exclusions still apply.
+
+The same boundary must carry through follow-up work. Use target-scoped searches, and select the target's Git repository explicitly:
+
+```powershell
+git -C .\target rev-parse --show-toplevel
+git -C .\target --no-pager log -5 --oneline
+```
+
+Review the reported root and evidence paths before accepting the result. Findings should describe files inside the target, not the host's Jekyll site, scripts, or dependencies. If the skill needs evidence outside that boundary, it should identify the gap and ask before expanding the investigation.
+
+This is **analysis scoping, not enforced filesystem isolation**. Host instructions remain in context, and an agent with terminal access can still read outside `target/`. For a strict access boundary, use a separately configured restricted environment with only the target and the required tooling available. Opening `target/` alone avoids automatic host discovery in the observed setup, but neither makes host skills available nor creates a sandbox.
 
 ## How the Replace-Target Scripts Work
 
