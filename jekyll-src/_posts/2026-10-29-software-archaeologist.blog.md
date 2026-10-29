@@ -176,12 +176,6 @@ These are single runs on one CLI version, and model output varies. The moon-phas
 
 VS Code discovers customizations within the open workspace folders. Opening the top-level folder gives the same host-first behavior as the CLI. Opening `target/` by itself gives the target's configuration only. A multi-root workspace that lists both folders makes both sets of customizations available.
 
-There is one setting to watch: `chat.useCustomizationsInParentRepositories`. The [documented monorepo behavior](https://code.visualstudio.com/docs/agent-customization/overview#_use-customizations-in-a-monorepo) lets VS Code collect customizations between an open subfolder and its parent repository root. The parent must be trusted, and the documentation describes the workspace folder as not itself being a repository root. This is not a documented promise of inheritance across separate repositories.
-
-In a follow-up check on October 29, I opened `target/` with `"chat.useCustomizationsInParentRepositories": true` and did not see the host's configuration being used. The repository inspection confirmed that `target/` is a submodule: its `.git` file points into the host's `.git/modules/` directory, but Git still reports `target/` as its own repository root. A `.git` file instead of a folder does not make the target an ordinary monorepo subfolder.
-
-That makes the submodule boundary the likely explanation, not a confirmed diagnosis of VS Code's discovery implementation. The available logs did not establish the exact loading decision. My earlier inference that a `.git` file might allow parent discovery was therefore not a reliable basis for this workflow.
-
 For this setup, **open the top-level `software-archaeologist` folder, trust it, and start a fresh chat**. That puts the host's customizations directly in the workspace instead of depending on parent discovery. Check the Chat customization diagnostics or **Developer: Open Agent Debug Logs** to confirm which files are available; do not assume the setting makes the host's agents, skills, and instructions available when only `target/` is open.
 
 ## How the Replace-Target Scripts Work
