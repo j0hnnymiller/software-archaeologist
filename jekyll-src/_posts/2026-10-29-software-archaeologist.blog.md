@@ -188,13 +188,7 @@ For example, invoke the inventory skill in VS Code with an explicit boundary:
 ```text
 /inventory-technology-stack target/
 
-Analyze only target/. Read the host skill and its supporting scripts as
-tooling, but do not inventory or assess the parent repository. Scope every
-search and file listing to target/, and run Git history commands against
-the target repository. Do not follow references outside target/; report
-them as out of scope. Make no changes and do not install packages or run
-builds. Report the resolved analysis root, exclusions, commands used, and
-target-relative evidence paths. Stop after the inventory and coverage notes.
+Analyze only target/. Read the host skill and its supporting scripts as tooling, but do not inventory or assess the parent repository. Scope every search and file listing to target/, and run Git history commands against the target repository. Do not follow references outside target/; report them as out of scope. Make no changes and do not install packages or run builds. Report the resolved analysis root, exclusions, commands used, and target-relative evidence paths. Stop after the inventory and coverage notes.
 ```
 
 In Copilot CLI, start `copilot --agent software-archeologist` from the host root and ask it to "Use the inventory-technology-stack skill on target/ only," followed by the same boundary instructions. Substitute another skill name and an appropriate stop condition for a different investigation.
@@ -216,7 +210,7 @@ git -C .\target rev-parse --show-toplevel
 git -C .\target --no-pager log -5 --oneline
 ```
 
-Review the reported root and evidence paths before accepting the result. Findings should describe files inside the target, not the host's Jekyll site, scripts, or dependencies. If the skill needs evidence outside that boundary, it should identify the gap and ask before expanding the investigation.
+Review the reported root and evidence paths before accepting the result. Findings should describe files inside the target, not the host's site, scripts, or dependencies. If the skill needs evidence outside that boundary, it should identify the gap and ask before expanding the investigation.
 
 This is **analysis scoping, not enforced filesystem isolation**. Host instructions remain in context, and an agent with terminal access can still read outside `target/`. For a strict access boundary, use a separately configured restricted environment with only the target and the required tooling available. Opening `target/` alone avoids automatic host discovery in the observed setup, but neither makes host skills available nor creates a sandbox.
 
