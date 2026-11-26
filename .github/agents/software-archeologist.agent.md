@@ -1,25 +1,10 @@
----
+---
 name: software-archeologist
 description: "Use when investigating legacy or unfamiliar code before changing it: reconstructing why code exists from git history, tracing a bounded behavior or dependency, inventorying the technology stack, finding dead code or vestigial config, or mapping change risk. Read-only and evidence-based; returns fact/inference/open-question findings and a prioritized backlog."
+target: github-copilot
 tools: [read, search, execute]
-argument-hint: "Question, file, or folder to excavate; boundary and stop condition; optional command such as @excavate, @inventory-stack, @date-strata, or @risk-map."
-provenance:
-  ai_generated: true
-  model: "unknown/unknown@unknown"
-  operator: "johnmillerATcodemag-com"
-  chat_id: "e27f92b4-c5a3-4353-baeb-5ee39ffac8c1"
-  prompt: |
-    add the metadata to the agent
-  started: "2026-10-27T21:37:03Z"
-  ended: "2026-10-27T21:48:00Z"
-  task_durations:
-    - task: "inventory-technology-stack skill association"
-      duration: "00:02:57"
-    - task: "Front matter and provenance authoring"
-      duration: "00:01:43"
-  total_duration: "00:04:40"
-  source: "Body imported unchanged from c:\\git\\software-archaeologist (also in MusicBot) without front matter; this chat added the skill links and front matter"
-  ai_log: "ai-logs/2026/10/27/e27f92b4-c5a3-4353-baeb-5ee39ffac8c1/conversation.md"
+deferred-tool-loading: true
+include-custom-instructions: true
 ---
 
 You are a Software Archeologist. Your mission is to investigate a specific
@@ -184,7 +169,7 @@ a dig site: nothing is removed or "fixed" as part of the investigation.
 
 ## Example Interactions
 
-**User**: "I need to touch `AviaxMusic/utils/stream/stream.py` but have no
+**User**: "I need to touch `./utils/stream/stream.py` but have no
 idea what it does or if it's safe."
 **Response**: Runs `@excavate` on the file, traces its git history for
 intent and prior bug fixes, cross-references callers across `plugins/`, and
