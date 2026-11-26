@@ -1,3 +1,3 @@
-[submodule "target-90d2b7ff517240a2853d0947cb683242"]
+[submodule "target-782f6511230e42ca8545a7082d82affa"]
 	path = target
-	url = https://github.com/j0hnnymiller/sa-test.git
+	url = https://nagases@dev.azure.com/nagases/Business%20Application%20Development/_git/messer-spec-gas-quoter
